@@ -40,13 +40,11 @@ admob._md5 = function(input) {
     var messageDigest = digest.digest();
     var hexString = "";
     for (var i = 0; i < messageDigest.length; i++) {
-      var h = java.lang.Integer.toHexString(0xFF & messageDigest[i]);
-      while (h.length < 2)
-        h = "0" + h;
-        hexString += h;
+      var h = java.lang.Integer.toHexString(0xff & messageDigest[i]);
+      while (h.length < 2) h = "0" + h;
+      hexString += h;
     }
     return hexString;
-
   } catch (noSuchAlgorithmException) {
     console.log("error generating md5: " + noSuchAlgorithmException);
     return null;
@@ -57,17 +55,22 @@ admob._md5 = function(input) {
 admob.activity = null;
 admob._getActivity = function() {
   if (admob.activity === null) {
-    admob.activity = application.android.foregroundActivity;      
+    admob.activity = application.android.foregroundActivity;
   }
   return admob.activity;
 };
 
-admob._buildAdRequest = function (settings) {
+admob._buildAdRequest = function(settings) {
   var builder = new com.google.android.gms.ads.AdRequest.Builder();
   if (settings.testing) {
-    builder.addTestDevice(com.google.android.gms.ads.AdRequest.DEVICE_ID_EMULATOR);
+    builder.addTestDevice(
+      com.google.android.gms.ads.AdRequest.DEVICE_ID_EMULATOR
+    );
     // This will request test ads on the emulator and device by passing this hashed device ID.
-    var ANDROID_ID = android.provider.Settings.Secure.getString(admob._getActivity().getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
+    var ANDROID_ID = android.provider.Settings.Secure.getString(
+      admob._getActivity().getContentResolver(),
+      android.provider.Settings.Secure.ANDROID_ID
+    );
     var deviceId = admob._md5(ANDROID_ID);
     if (deviceId !== null) {
       deviceId = deviceId.toUpperCase();
@@ -77,13 +80,15 @@ admob._buildAdRequest = function (settings) {
   }
   var bundle = new android.os.Bundle();
   bundle.putInt("nativescript", 1);
-  var adextras = new com.google.android.gms.ads.mediation.admob.AdMobExtras(bundle);
+  var adextras = new com.google.android.gms.ads.mediation.admob.AdMobExtras(
+    bundle
+  );
   //builder = builder.addNetworkExtras(adextras);
   return builder.build();
 };
 
 admob.createBanner = function(arg) {
-  return new Promise(function (resolve, reject) {
+  return new Promise(function(resolve, reject) {
     try {
       // always close a previous opened banner
       if (admob.adView !== null && admob.adView !== undefined) {
@@ -93,7 +98,9 @@ admob.createBanner = function(arg) {
         }
       }
       var settings = admob.merge(arg, admob.defaults);
-      admob.adView = new com.google.android.gms.ads.AdView(admob._getActivity());
+      admob.adView = new com.google.android.gms.ads.AdView(
+        admob._getActivity()
+      );
       admob.adView.setAdUnitId(settings.androidBannerId);
       var bannerType = admob._getBannerType(settings.size);
       admob.adView.setAdSize(bannerType);
@@ -104,34 +111,45 @@ admob.createBanner = function(arg) {
       admob.adView.loadAd(ad);
 
       var density = utils.layout.getDisplayDensity(),
-          top = settings.margins.top * density,
-          bottom = settings.margins.bottom * density;
+        top = settings.margins.top * density,
+        bottom = settings.margins.bottom * density;
 
       var relativeLayoutParams = new android.widget.RelativeLayout.LayoutParams(
-          android.widget.RelativeLayout.LayoutParams.MATCH_PARENT,
-          android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT);
+        android.widget.RelativeLayout.LayoutParams.MATCH_PARENT,
+        android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT
+      );
 
       if (bottom > -1) {
         relativeLayoutParams.bottomMargin = bottom;
-        relativeLayoutParams.addRule(android.widget.RelativeLayout.ALIGN_PARENT_BOTTOM);
+        relativeLayoutParams.addRule(
+          android.widget.RelativeLayout.ALIGN_PARENT_BOTTOM
+        );
       } else {
         if (top > -1) {
           relativeLayoutParams.topMargin = top;
         }
-        relativeLayoutParams.addRule(android.widget.RelativeLayout.ALIGN_PARENT_TOP);
+        relativeLayoutParams.addRule(
+          android.widget.RelativeLayout.ALIGN_PARENT_TOP
+        );
       }
 
-      var adViewLayout = new android.widget.RelativeLayout(admob._getActivity());
+      var adViewLayout = new android.widget.RelativeLayout(
+        admob._getActivity()
+      );
       adViewLayout.addView(admob.adView, relativeLayoutParams);
 
       var relativeLayoutParamsOuter = new android.widget.RelativeLayout.LayoutParams(
-          android.widget.RelativeLayout.LayoutParams.MATCH_PARENT,
-          android.widget.RelativeLayout.LayoutParams.MATCH_PARENT);
+        android.widget.RelativeLayout.LayoutParams.MATCH_PARENT,
+        android.widget.RelativeLayout.LayoutParams.MATCH_PARENT
+      );
 
       // wrapping it in a timeout makes sure that when this function is loaded from
-      // a Page.loaded event 'frame.topmost()' doesn't resolve to 'undefined'  
+      // a Page.loaded event 'frame.topmost()' doesn't resolve to 'undefined'
       setTimeout(function() {
-        frame.topmost().currentPage.android.getParent().addView(adViewLayout, relativeLayoutParamsOuter);
+        frame
+          .topmost()
+          .currentPage.android.getParent()
+          .addView(adViewLayout, relativeLayoutParamsOuter);
       }, 0);
 
       resolve();
@@ -143,26 +161,30 @@ admob.createBanner = function(arg) {
 };
 
 admob.createInterstitial = function(arg) {
-  return new Promise(function (resolve, reject) {
+  return new Promise(function(resolve, reject) {
     try {
       var settings = admob.merge(arg, admob.defaults);
-      admob.interstitialView = new com.google.android.gms.ads.InterstitialAd(admob._getActivity());
+      admob.interstitialView = new com.google.android.gms.ads.InterstitialAd(
+        admob._getActivity()
+      );
       admob.interstitialView.setAdUnitId(settings.androidInterstitialId);
 
       // Interstitial ads must be loaded before they can be shown, so adding a listener
-      var InterstitialAdListener = com.google.android.gms.ads.AdListener.extend({
-        onAdLoaded: function () {
-          admob.interstitialView.show();
-          resolve();
-        },
-        onAdFailedToLoad: function (errorCode) {
-          reject(errorCode);
-        },
-        onAdClosed: function() {
-          admob.interstitialView.setAdListener(null);
-          admob.interstitialView = null;
+      var InterstitialAdListener = com.google.android.gms.ads.AdListener.extend(
+        {
+          onAdLoaded: function() {
+            admob.interstitialView.show();
+            resolve();
+          },
+          onAdFailedToLoad: function(errorCode) {
+            reject(errorCode);
+          },
+          onAdClosed: function() {
+            admob.interstitialView.setAdListener(null);
+            admob.interstitialView = null;
+          }
         }
-      });
+      );
       admob.interstitialView.setAdListener(new InterstitialAdListener());
 
       var ad = admob._buildAdRequest(settings);
@@ -175,7 +197,7 @@ admob.createInterstitial = function(arg) {
 };
 
 admob.hideBanner = function(arg) {
-  return new Promise(function (resolve, reject) {
+  return new Promise(function(resolve, reject) {
     try {
       if (admob.adView !== null) {
         var parent = admob.adView.getParent();
